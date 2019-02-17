@@ -1,46 +1,82 @@
-import React, { Component } from 'react'
+import React, {Component} from 'react'
 import shuffle from 'lodash.shuffle'
 
 import './App.css'
 
 import Card from './Card'
 import GuessCount from './GuessCount'
-import HallOfFame, { FAKE_HOF} from './HallOfFame'
+import HallOfFame, {FAKE_HOF} from './HallOfFame'
 
 const SIDE = 6
 const SYMBOLS = '😀🎉💖🎩🐶🐱🦄🐬🌍🌛🌞💫🍎🍌🍓🍐🍟🍿'
 
 class App extends Component {
-  cards = this.generateCards()
-
-  generateCards() {
-    const result = []
-    const size = SIDE * SIDE
-    const candidates = shuffle(SYMBOLS)
-    while (result.length < size) {
-      const card = candidates.pop()
-      result.push(card, card)
+    state = {
+        cards: this.generateCards(),
+        currentPair: [],
+        guesses: 0,
+        matchedCardIndices: [],
     }
-    return shuffle(result)
-  }
 
-  handleCardClick(card) {
-    console.log(card, 'clicked')
-  }
+    generateCards() {
+        const result = []
+        const size = SIDE * SIDE
+        const candidates = shuffle(SYMBOLS)
+        while (result.length < size) {
+            const card = candidates.pop()
+            result.push(card, card)
+        }
+        return shuffle(result)
+    }
 
-  render() {
-    const won = new Date().getSeconds() % 2 === 0
-    return (
-      <div className="memory">
-        <GuessCount guesses={0} />
-        {this.cards.map((card, index) => (
-          <Card card={card} feedback="visible" key={index} onClick={this.handleCardClick} />
-        ))}
+    handleCardClick = index => {
+        const {currentPair} = this.state
 
-        {won && <HallOfFame entries={FAKE_HOF}/>}
-      </div>
-    )
-  }
+        if (currentPair.length === 2) {
+            return
+        }
+
+        if (currentPair.length === 0) {
+            this.setState({currentPair: [index]})
+            return
+        }
+
+        this.handleNewPairClosedBy(index)
+    }
+
+    getFeedbackForCard(index) {
+        const {currentPair, matchedCardIndices} = this.state
+        const indexMatched = matchedCardIndices.includes(index)
+
+        if (currentPair.length < 2) {
+            return indexMatched || index === currentPair[0] ? 'visible' : 'hidden'
+        }
+
+        if (currentPair.includes(index)) {
+            return indexMatched ? 'justMatched' : 'justMismatched'
+        }
+
+        return indexMatched ? 'visible' : 'hidden'
+    }
+
+    render() {
+        const {cards, guesses, matchedCardIndices} = this.state
+        const won = matchedCardIndices.length === cards.length
+        return (
+            <div className="memory">
+                <GuessCount guesses={guesses}/>
+                {cards.map((card, index) => (
+                    <Card card={card}
+                          feedback={this.getFeedbackForCard(index)}
+                          key={index}
+                          index={index}
+                          onClick={this.handleCardClick.bind(this)}/>
+                ))}
+
+                {won && <HallOfFame entries={FAKE_HOF}/>}
+            </div>
+        )
+    }
 }
 
 export default App
